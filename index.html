@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>88 Gravity · Paid Links & Tools Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --ink:#1d2433; --muted:#6b7280; --line:#e6e8ec;
+    --blue:#2f6fde; --teal:#14a39a; --orange:#f08c2e; --red:#d93f3f; --green:#2e9e5b; --purple:#7a5af5; --gray:#a3aab5; --amber:#e3b008;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  header{background:#121826;color:#fff;padding:18px 28px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+  header h1{font-size:19px;margin:0;font-weight:600;letter-spacing:.2px}
+  header .sub{font-size:12px;color:#aab2c3;margin-top:3px}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .filters label{font-size:11px;color:#aab2c3;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+  select,button{font:inherit;font-size:13px;border-radius:8px;border:1px solid #384056;background:#1d2435;color:#fff;padding:7px 10px;min-width:150px}
+  button{min-width:0;cursor:pointer;background:var(--blue);border-color:var(--blue);font-weight:500}
+  main{padding:22px 28px 40px;max-width:1500px;margin:0 auto}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+  .kpi{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--line)}
+  .kpi .lab{font-size:12px;color:var(--muted);font-weight:500}
+  .kpi .val{font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.3px}
+  .kpi .note{font-size:12px;color:var(--muted);margin-top:4px}
+  .kpi.alert .val{color:var(--red)}
+  .bar{height:6px;background:#eef0f3;border-radius:4px;margin-top:9px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--blue);border-radius:4px}
+  .grid{display:grid;gap:16px;margin-bottom:16px}
+  .g2{grid-template-columns:1.6fr 1fr}
+  .g2e{grid-template-columns:1fr 1fr}
+  @media(max-width:1000px){.g2,.g2e{grid-template-columns:1fr}}
+  .card{background:var(--card);border-radius:12px;border:1px solid var(--line);padding:16px 18px;min-width:0}
+  .card h2{font-size:15px;margin:0 0 3px;font-weight:600}
+  .card .hint{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .chart{position:relative;height:300px}
+  .chart.tall{height:380px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:#fafbfc;position:sticky;top:0}
+  td{padding:8px;border-bottom:1px solid #f0f1f4;vertical-align:middle}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .scroll{max-height:420px;overflow:auto}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .s-Done{background:#e3f5ea;color:#1f7a45}.s-Overdue{background:#fde7e7;color:#b42323}.s-AtRisk{background:#fff0dc;color:#a85a00}
+  .s-DueSoon{background:#fff8d6;color:#8a6d00}.s-OnTrack{background:#e6efff;color:#1f4fa8}.s-NoDeadline{background:#eee;color:#555}
+  .s-Active{background:#e3f5ea;color:#1f7a45}.s-Trial{background:#fff8d6;color:#8a6d00}.s-Paused{background:#eee;color:#555}.s-Cancelled{background:#fde7e7;color:#b42323}
+  .mini{display:flex;align-items:center;gap:8px}
+  .mini .bar{flex:1;margin:0;min-width:60px}
+  a{color:var(--blue);text-decoration:none}
+  .muted{color:var(--muted)}
+  .empty{color:var(--muted);padding:24px;text-align:center}
+  #loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted);z-index:9}
+  .tag{font-size:11px;color:var(--muted)}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:10px}
+</style>
+</head>
+<body>
+<div id="loading">Loading live data…</div>
+<div id="gate" style="display:none;position:fixed;inset:0;background:#121826;z-index:10;align-items:center;justify-content:center">
+  <form id="gateForm" style="background:#fff;border-radius:14px;padding:28px;width:340px;max-width:90vw">
+    <div style="font-weight:600;font-size:17px;margin-bottom:4px">88 Gravity Dashboard</div>
+    <div class="muted" style="font-size:13px;margin-bottom:16px">Enter the access key to view live data.</div>
+    <input id="gateKey" type="password" autocomplete="off" placeholder="Access key" style="width:100%;font:inherit;padding:10px 12px;border:1px solid #d0d4db;border-radius:8px">
+    <div id="gateErr" style="color:#b42323;font-size:12.5px;min-height:18px;margin:8px 0"></div>
+    <button type="submit" style="width:100%;padding:10px">View dashboard</button>
+  </form>
+</div>
+<header>
+  <div>
+    <h1>88 Gravity · Paid Links &amp; Tools Dashboard</h1>
+    <div class="sub" id="updated"></div>
+  </div>
+  <div class="filters">
+    <div><label>Period</label><select id="fPeriod"></select></div>
+    <div><label>Project</label><select id="fProject"></select></div>
+    <div><label>Project Owner</label><select id="fOwner"></select></div>
+    <div><label>&nbsp;</label><button id="btnRefresh" type="button">↻ Refresh</button></div>
+  </div>
+</header>
+<main>
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid g2">
+    <div class="card"><h2>Monthly budget vs actual spend</h2><div class="hint">Financial year · planned paid-activity budget (by deadline) vs actual spend (paid links by publish date + paid tools)</div><div class="chart"><canvas id="cMonthly"></canvas></div></div>
+    <div class="card"><h2>Paid activity status</h2><div class="hint" id="statusHint"></div><div class="chart"><canvas id="cStatus"></canvas></div></div>
+  </div>
+
+  <div class="grid g2e">
+    <div class="card"><h2>Completed vs pending by activity</h2><div class="hint">Links live vs still pending, selected period</div><div class="chart"><canvas id="cActQty"></canvas></div></div>
+    <div class="card"><h2>Budget vs spent by activity</h2><div class="hint">Planned budget vs actual spend (INR), selected period</div><div class="chart"><canvas id="cActBudget"></canvas></div></div>
+  </div>
+
+  <div class="grid g2e">
+    <div class="card"><h2>Paid tools · monthly cost</h2><div class="hint" id="toolsHint"></div><div class="chart tall"><canvas id="cTools"></canvas></div></div>
+    <div class="card"><h2>Paid tools</h2><div class="hint">Cancelled and paused tools cost ₹0</div><div class="scroll" style="max-height:380px"><table id="tTools"></table></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><h2>By project</h2><div class="hint">Selected period · sorted by planned budget</div><div class="scroll"><table id="tProjects"></table></div></div>
+
+  <div class="grid g2e">
+    <div class="card"><h2>Team scorecard</h2><div class="hint">By project owner and assignee, selected period</div><div class="scroll"><table id="tTeam"></table></div></div>
+    <div class="card"><h2>Overdue &amp; at risk now</h2><div class="hint">Open tasks past or close to deadline</div><div class="scroll"><table id="tOverdue"></table></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><h2>Live links</h2><div class="hint" id="linksHint"></div><div class="scroll"><table id="tLinks"></table></div></div>
+</main>
+<footer id="foot"></footer>
+
+<script>
+/* ===== For hosting outside Google (e.g. GitHub Pages): paste your Apps Script Web app URL here ===== */
+window.DATA_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';   // e.g. https://script.google.com/macros/s/AKfy.../exec
+</script>
+<script>
+(function(){
+  const C = {blue:'#2f6fde',teal:'#14a39a',orange:'#f08c2e',red:'#d93f3f',green:'#2e9e5b',purple:'#7a5af5',gray:'#a3aab5',amber:'#e3b008',lblue:'#a9c4f5',lgray:'#dfe3e8'};
+  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let D=null; const charts={};
+  const $=id=>document.getElementById(id);
+  const inr=n=>'₹'+Math.round(n||0).toLocaleString('en-IN');
+  const inrS=n=>{n=n||0;const a=Math.abs(n);return a>=1e7?'₹'+(n/1e7).toFixed(2)+' Cr':a>=1e5?'₹'+(n/1e5).toFixed(2)+' L':a>=1e3?'₹'+(n/1e3).toFixed(1)+'K':'₹'+Math.round(n)};
+  const num=n=>(n||0).toLocaleString('en-IN');
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmtD=ms=>{if(!ms)return '';const d=new Date(ms);return d.getDate()+'-'+MON[d.getMonth()]+'-'+d.getFullYear()};
+  const mStart=(y,m)=>new Date(y,m,1).getTime();
+
+  function statusOf(t,now){
+    if(t.qty>0 && t.delivered>=t.qty) return 'Done';
+    if(!t.deadline) return 'No Deadline';
+    const hl=(t.deadline-now)/36e5;
+    if(hl<0) return 'Overdue';
+    if(t.start && t.deadline>t.start){const el=(now-t.start)/(t.deadline-t.start); if(el>=.5 && t.delivered/t.qty<.3) return 'At Risk';}
+    return hl<=48?'Due Soon':'On Track';
+  }
+
+  function buildFilters(){
+    const fy=new Date(D.fyStart); const now=new Date(D.generatedAt);
+    const opts=[];
+    const cur=new Date(now.getFullYear(),now.getMonth(),1);
+    opts.push(['m:'+cur.getTime(),'This month ('+MON[cur.getMonth()]+' '+cur.getFullYear()+')']);
+    opts.push(['fy','Financial year ('+MON[fy.getMonth()]+' '+fy.getFullYear()+' – '+MON[(fy.getMonth()+11)%12]+' '+(fy.getFullYear()+1)+')']);
+    for(let i=0;i<12;i++){const d=new Date(fy.getFullYear(),fy.getMonth()+i,1); if(d.getTime()!==cur.getTime()) opts.push(['m:'+d.getTime(),MON[d.getMonth()]+' '+d.getFullYear()]);}
+    opts.push(['all','All time']);
+    const keep=$('fPeriod').value;
+    $('fPeriod').innerHTML=opts.map(o=>'<option value="'+o[0]+'">'+esc(o[1])+'</option>').join('');
+    if(keep && opts.some(o=>o[0]===keep)) $('fPeriod').value=keep;
+    const projects=[...new Set(D.tasks.map(t=>t.project).filter(Boolean))].sort();
+    const owners=[...new Set(D.tasks.map(t=>t.owner).filter(Boolean))].sort();
+    fill('fProject',['All projects'].concat(projects)); fill('fOwner',['All owners'].concat(owners));
+  }
+  function fill(id,arr){const keep=$(id).value;$(id).innerHTML=arr.map((v,i)=>'<option value="'+(i?esc(v):'')+'">'+esc(v)+'</option>').join('');if(arr.indexOf(keep)>0)$(id).value=keep;}
+
+  function period(){
+    const v=$('fPeriod').value, fy=new Date(D.fyStart);
+    if(v==='fy') return {from:D.fyStart,to:new Date(fy.getFullYear()+1,fy.getMonth(),1).getTime(),months:12,label:'FY'};
+    if(v==='all') return {from:-Infinity,to:Infinity,months:12,label:'All time'};
+    const f=+v.slice(2), d=new Date(f); return {from:f,to:new Date(d.getFullYear(),d.getMonth()+1,1).getTime(),months:1,label:MON[d.getMonth()]+' '+d.getFullYear()};
+  }
+
+  function render(){
+    const now=D.generatedAt, P=period(), fp=$('fProject').value, fo=$('fOwner').value;
+    const inP=ms=>ms>=P.from && ms<P.to;
+    const scope=t=>(!fp||t.project===fp)&&(!fo||t.owner===fo);
+    D.tasks.forEach(t=>t.status=statusOf(t,now));
+    const tasksAll=D.tasks.filter(scope);
+    const tasks=tasksAll.filter(t=>P.label==='All time'||(t.deadline&&inP(t.deadline)));
+    const linkDate=l=>l.publish||l.entered;
+    const linksAll=D.links.filter(l=>!l.dup && (!fp||l.project===fp) && (!fo||l.owner===fo));
+    const links=linksAll.filter(l=>P.label==='All time'||(linkDate(l)&&inP(linkDate(l))));
+    const tools=D.tools;
+    const toolsMonthly=tools.reduce((s,t)=>s+(t.monthly||0),0);
+    const toolsPeriod=toolsMonthly*P.months;
+    const planned=tasks.reduce((s,t)=>s+t.budget,0), spent=links.reduce((s,l)=>s+(l.priceInr||0),0);
+    const qty=tasks.reduce((s,t)=>s+t.qty,0), live=tasks.reduce((s,t)=>s+Math.min(t.delivered,t.qty),0), pending=Math.max(0,qty-live);
+    const overdue=tasksAll.filter(t=>t.status==='Overdue').length, atrisk=tasksAll.filter(t=>t.status==='At Risk'||t.status==='Due Soon').length;
+    const doneT=tasksAll.filter(t=>t.completedOn), onTime=doneT.filter(t=>t.onTime==='Yes').length;
+    const showTools=!fp&&!fo;
+
+    // ---------- KPIs
+    const k=[];
+    k.push(kpi('Total budget · '+P.label, inr(planned+(showTools?toolsPeriod:0)), showTools?'Paid activities '+inrS(planned)+' + tools '+inrS(toolsPeriod):'Paid activities only (tools not split by project)'));
+    k.push(kpi('Paid activities budget', inr(planned), num(qty)+' activities planned'));
+    k.push(kpi('Paid activities spent', inr(spent), pct(spent,planned)+'% of budget used', pct(spent,planned)));
+    k.push(kpi('Paid tools · per month', inr(toolsMonthly), inr(toolsMonthly*12)+' per year · '+tools.filter(t=>t.monthly>0).length+' paying tools'));
+    k.push(kpi('Completed vs pending', num(live)+' / '+num(pending), pct(live,qty)+'% complete', pct(live,qty)));
+    k.push(kpi('Overdue tasks (now)', num(overdue), atrisk+' at risk or due within 48 hrs', null, overdue>0));
+    k.push(kpi('On-time completion', doneT.length?pct(onTime,doneT.length)+'%':'—', doneT.length?onTime+' of '+doneT.length+' completed tasks':'No completed tasks yet'));
+    $('kpis').innerHTML=k.join('');
+
+    // ---------- Monthly chart (FY, ignores period)
+    const fy=new Date(D.fyStart), labels=[], pl=[], sp=[], tl=[];
+    for(let i=0;i<12;i++){const a=new Date(fy.getFullYear(),fy.getMonth()+i,1).getTime(), b=new Date(fy.getFullYear(),fy.getMonth()+i+1,1).getTime();
+      labels.push(MON[new Date(a).getMonth()]+' '+String(new Date(a).getFullYear()).slice(2));
+      pl.push(tasksAll.filter(t=>t.deadline>=a&&t.deadline<b).reduce((s,t)=>s+t.budget,0));
+      sp.push(linksAll.filter(l=>{const d=linkDate(l);return d>=a&&d<b}).reduce((s,l)=>s+(l.priceInr||0),0));
+      tl.push(showTools?toolsMonthly:0);}
+    chart('cMonthly',{type:'bar',data:{labels,datasets:[
+      {label:'Paid activities · planned',data:pl,backgroundColor:C.lblue,stack:'p',borderRadius:4},
+      {label:'Paid activities · spent',data:sp,backgroundColor:C.blue,stack:'a',borderRadius:4},
+      {label:'Paid tools',data:tl,backgroundColor:C.orange,stack:'a',borderRadius:4}]},
+      options:base({scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>inrS(v)}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
+
+    // ---------- Status doughnut
+    const order=['Done','On Track','Due Soon','At Risk','Overdue','No Deadline'], col=[C.green,C.blue,C.amber,C.orange,C.red,C.gray];
+    const sc=order.map(s=>tasks.filter(t=>t.status===s).length);
+    $('statusHint').textContent=tasks.length+' activity lines in '+P.label;
+    chart('cStatus',{type:'doughnut',data:{labels:order,datasets:[{data:sc,backgroundColor:col,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{boxWidth:12,font:{family:'Inter'}}}}}});
+
+    // ---------- By activity
+    const acts=[...new Set(tasks.map(t=>t.activity))];
+    const aRows=acts.map(a=>{const ts=tasks.filter(t=>t.activity===a);const q=ts.reduce((s,t)=>s+t.qty,0),lv=ts.reduce((s,t)=>s+Math.min(t.delivered,t.qty),0);
+      return {a,q,lv,pd:q-lv,b:ts.reduce((s,t)=>s+t.budget,0),s:links.filter(l=>l.activity===a).reduce((s,l)=>s+(l.priceInr||0),0)}}).sort((x,y)=>y.b-x.b);
+    chart('cActQty',{type:'bar',data:{labels:aRows.map(r=>r.a),datasets:[{label:'Live',data:aRows.map(r=>r.lv),backgroundColor:C.green,borderRadius:4},{label:'Pending',data:aRows.map(r=>r.pd),backgroundColor:C.lgray,borderRadius:4}]},
+      options:base({indexAxis:'y',scales:{x:{stacked:true,ticks:{precision:0}},y:{stacked:true,grid:{display:false}}}})});
+    chart('cActBudget',{type:'bar',data:{labels:aRows.map(r=>r.a),datasets:[{label:'Planned budget',data:aRows.map(r=>r.b),backgroundColor:C.lblue,borderRadius:4},{label:'Spent',data:aRows.map(r=>r.s),backgroundColor:C.blue,borderRadius:4}]},
+      options:base({scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>inrS(v)}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
+
+    // ---------- Tools
+    const paying=tools.filter(t=>t.monthly>0).sort((a,b)=>b.monthly-a.monthly);
+    $('toolsHint').textContent=inr(toolsMonthly)+' / month · '+inr(toolsMonthly*12)+' / year (INR, USD at ₹'+D.usdInr+')';
+    chart('cTools',{type:'bar',data:{labels:paying.map(t=>t.tool+(t.plan?' · '+t.plan:'')),datasets:[{label:'Monthly cost',data:paying.map(t=>t.monthly),backgroundColor:paying.map(t=>t.status==='Trial'?C.amber:C.orange),borderRadius:4}]},
+      options:base({indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>inr(c.raw)+' / month ('+paying[c.dataIndex].status+')'}}},scales:{x:{ticks:{callback:v=>inrS(v)}},y:{grid:{display:false}}}})});
+    $('tTools').innerHTML='<tr><th>Tool</th><th>Plan</th><th>Status</th><th class="n">Price</th><th class="n">Monthly (INR)</th><th>Renewal</th></tr>'+
+      tools.slice().sort((a,b)=>b.monthly-a.monthly).map(t=>'<tr><td><b>'+esc(t.tool)+'</b><div class="tag">'+esc(t.category)+'</div></td><td>'+esc(t.plan)+'<div class="tag">'+esc(t.cycle)+'</div></td><td>'+pill(t.status)+'</td><td class="n">'+esc(t.currency)+' '+num(t.price)+'</td><td class="n">'+inr(t.monthly)+'</td><td>'+(t.renewal?fmtD(t.renewal):'<span class="muted">—</span>')+'</td></tr>').join('');
+
+    // ---------- Projects
+    const projs=[...new Set(tasks.map(t=>t.project))];
+    const pRows=projs.map(p=>{const ts=tasks.filter(t=>t.project===p);const q=ts.reduce((s,t)=>s+t.qty,0),lv=ts.reduce((s,t)=>s+Math.min(t.delivered,t.qty),0);
+      return {p,o:ts[0].owner,q,lv,b:ts.reduce((s,t)=>s+t.budget,0),s:links.filter(l=>l.project===p).reduce((s,l)=>s+(l.priceInr||0),0),od:tasksAll.filter(t=>t.project===p&&t.status==='Overdue').length,acts:[...new Set(ts.map(t=>t.activity))].join(', ')}}).sort((a,b)=>b.b-a.b);
+    $('tProjects').innerHTML=pRows.length?'<tr><th>Project</th><th>Owner</th><th>Activities</th><th class="n">Planned</th><th class="n">Live</th><th style="min-width:150px">Progress</th><th class="n">Budget</th><th class="n">Spent</th><th class="n">Overdue</th></tr>'+
+      pRows.map(r=>'<tr><td><b>'+esc(r.p)+'</b></td><td>'+esc(r.o)+'</td><td class="muted">'+esc(r.acts)+'</td><td class="n">'+r.q+'</td><td class="n">'+r.lv+'</td><td>'+prog(r.lv,r.q)+'</td><td class="n">'+inr(r.b)+'</td><td class="n">'+inr(r.s)+'</td><td class="n">'+(r.od?'<b style="color:var(--red)">'+r.od+'</b>':'0')+'</td></tr>').join('')
+      +'<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>'+qty+'</b></td><td class="n"><b>'+live+'</b></td><td>'+prog(live,qty)+'</td><td class="n"><b>'+inr(planned)+'</b></td><td class="n"><b>'+inr(spent)+'</b></td><td class="n"><b>'+overdue+'</b></td></tr>'
+      :'<tr><td class="empty">No paid activities planned for this period.</td></tr>';
+
+    // ---------- Team
+    const people={};
+    const add=(n,role,t)=>{if(!n)return;const x=people[n]||(people[n]={n,roles:new Set(),tasks:0,q:0,lv:0,od:0,done:0,ot:0});x.roles.add(role);x.tasks++;x.q+=t.qty;x.lv+=Math.min(t.delivered,t.qty);if(t.status==='Overdue')x.od++;if(t.completedOn){x.done++;if(t.onTime==='Yes')x.ot++;}};
+    tasks.forEach(t=>{add(t.owner,'Owner',t);if(t.assignee&&t.assignee!==t.owner)add(t.assignee,'Assignee',t);});
+    const tm=Object.values(people).sort((a,b)=>b.q-a.q);
+    $('tTeam').innerHTML=tm.length?'<tr><th>Person</th><th class="n">Tasks</th><th class="n">Planned</th><th class="n">Live</th><th style="min-width:120px">Progress</th><th class="n">Overdue</th><th class="n">On-time</th></tr>'+
+      tm.map(x=>'<tr><td><b>'+esc(x.n)+'</b><div class="tag">'+[...x.roles].join(' · ')+'</div></td><td class="n">'+x.tasks+'</td><td class="n">'+x.q+'</td><td class="n">'+x.lv+'</td><td>'+prog(x.lv,x.q)+'</td><td class="n">'+(x.od?'<b style="color:var(--red)">'+x.od+'</b>':'0')+'</td><td class="n">'+(x.done?pct(x.ot,x.done)+'%':'—')+'</td></tr>').join(''):'<tr><td class="empty">No tasks in this period.</td></tr>';
+
+    // ---------- Overdue
+    const od=tasksAll.filter(t=>['Overdue','At Risk','Due Soon'].includes(t.status)).sort((a,b)=>a.deadline-b.deadline);
+    $('tOverdue').innerHTML=od.length?'<tr><th>Task</th><th>Project</th><th>Activity</th><th>Assignee</th><th class="n">Pending</th><th>Deadline</th><th>Status</th></tr>'+
+      od.map(t=>{const h=(t.deadline-now)/36e5;return '<tr><td>'+esc(t.id||'—')+'</td><td>'+esc(t.project)+'</td><td>'+esc(t.activity)+'</td><td>'+esc(t.assignee||t.owner||'')+'</td><td class="n"><b>'+(t.qty-Math.min(t.delivered,t.qty))+'</b>/'+t.qty+'</td><td>'+fmtD(t.deadline)+'<div class="tag">'+(h<0?'overdue '+hrs(-h):hrs(h)+' left')+'</div></td><td>'+pill(t.status)+'</td></tr>'}).join('')
+      :'<tr><td class="empty">✔ Nothing overdue or at risk.</td></tr>';
+
+    // ---------- Links
+    const ls=links.slice().sort((a,b)=>(linkDate(b)||0)-(linkDate(a)||0));
+    const avg=f=>{const v=ls.map(f).filter(x=>x>0);return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length):'—'};
+    $('linksHint').textContent=ls.length+' live links in '+P.label+(ls.length?' · avg DA '+avg(l=>l.da)+' · avg DR '+avg(l=>l.dr)+' · avg price '+(ls.length?inr(spent/ls.length):'—'):'');
+    $('tLinks').innerHTML=ls.length?'<tr><th>Published</th><th>Project</th><th>Activity</th><th>Publisher</th><th class="n">DA</th><th class="n">DR</th><th class="n">Spam</th><th class="n">Traffic</th><th>Top country</th><th>Type</th><th class="n">Price</th><th>Link</th></tr>'+
+      ls.map(l=>'<tr><td>'+fmtD(linkDate(l))+'</td><td>'+esc(l.project)+'</td><td>'+esc(l.activity)+'</td><td>'+esc(l.site)+'</td><td class="n">'+(l.da||'')+'</td><td class="n">'+(l.dr||'')+'</td><td class="n">'+(l.spam!==''&&l.spam!=null?l.spam+'%':'')+'</td><td class="n">'+(l.traffic?num(l.traffic):'')+'</td><td>'+esc(l.country)+(l.countryPct?' <span class="tag">'+l.countryPct+'%</span>':'')+'</td><td>'+esc(l.linkType)+'</td><td class="n">'+inr(l.priceInr)+'</td><td><a href="'+esc(l.url)+'" target="_blank" rel="noopener">Open ↗</a>'+(l.check&&l.check!=='OK'?'<div class="tag" style="color:var(--red)">'+esc(l.check)+'</div>':'')+'</td></tr>').join('')
+      :'<tr><td class="empty">No live links submitted for this period yet.</td></tr>';
+
+    $('updated').textContent='Live data · last refreshed '+new Date(D.generatedAt).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})+(D.snapshot?' · PREVIEW SNAPSHOT':'');
+    $('foot').innerHTML='Source: '+(D.sheetUrl?'<a href="'+esc(D.sheetUrl)+'" target="_blank" rel="noopener">88G Paid Links &amp; Tools Tracker</a>':'88G Paid Links & Tools Tracker')+' · Tools cost = active + trial subscriptions converted to INR';
+  }
+
+  function kpi(lab,val,note,bar,alert){return '<div class="kpi'+(alert?' alert':'')+'"><div class="lab">'+esc(lab)+'</div><div class="val">'+val+'</div><div class="note">'+esc(note)+'</div>'+(bar!=null?'<div class="bar"><i style="width:'+Math.min(100,bar)+'%;background:'+(bar>100?C.red:C.blue)+'"></i></div>':'')+'</div>'}
+  function pill(s){return '<span class="pill s-'+String(s).replace(/\s/g,'')+'">'+esc(s)+'</span>'}
+  function prog(a,b){const p=pct(a,b);return '<div class="mini"><div class="bar"><i style="width:'+Math.min(100,p)+'%;background:'+(p>=100?C.green:C.blue)+'"></i></div><span class="tag">'+p+'%</span></div>'}
+  function hrs(h){return h>=48?Math.round(h/24)+' days':h>=1?Math.round(h)+' hrs':Math.max(1,Math.round(h*60))+' min'}
+  function base(o){const b={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{family:'Inter'}}}},scales:{}};
+    return deep(b,o)}
+  function deep(a,b){for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&typeof b[k]!=='function'){a[k]=deep(a[k]||{},b[k])}else a[k]=b[k]}return a}
+  function chart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg)}
+
+  const KEYNAME='g88_dash_key';
+  const getKey=()=>{try{return localStorage.getItem(KEYNAME)||''}catch(e){return window.__k||''}};
+  const setKey=k=>{window.__k=k;try{k?localStorage.setItem(KEYNAME,k):localStorage.removeItem(KEYNAME)}catch(e){}};
+  function gate(msg){$('loading').style.display='none';$('gate').style.display='flex';$('gateErr').textContent=msg||'';$('gateKey').focus();}
+  $('gateForm').addEventListener('submit',e=>{e.preventDefault();const k=$('gateKey').value.trim();if(!k)return;setKey(k);$('gate').style.display='none';$('loading').style.display='flex';load();});
+
+  function load(){
+    const key=getKey();
+    const viaScript=window.google&&google.script&&google.script.run;
+    if(window.DATA_URL.indexOf('PASTE_')===0 && !viaScript){$('loading').textContent='Setup needed: paste your Apps Script Web app URL into DATA_URL at the top of index.html.';return;}
+    if(!window.SNAPSHOT && !key && (viaScript||window.DATA_URL)){gate();return;}
+    $('btnRefresh').disabled=true; $('btnRefresh').textContent='Loading…';
+    const fail=msg=>{ if(/access key/i.test(msg)){setKey('');gate(msg);} else {$('loading').style.display='flex';$('loading').textContent='Could not load data: '+msg;} $('btnRefresh').disabled=false;$('btnRefresh').textContent='↻ Refresh'; };
+    const done=json=>{let d;try{d=typeof json==='string'?JSON.parse(json):json}catch(e){return fail('bad response')}
+      if(d&&d.error) return fail(d.error);
+      D=d;
+      try{buildFilters();render();}catch(e){return fail('could not draw the dashboard ('+e.message+')')}
+      $('loading').style.display='none';$('btnRefresh').disabled=false;$('btnRefresh').textContent='↻ Refresh';};
+    if(viaScript){
+      google.script.run.withSuccessHandler(done).withFailureHandler(e=>fail(e&&e.message||String(e))).getDashboardData(key);
+    } else if(window.DATA_URL){
+      fetch(window.DATA_URL+(window.DATA_URL.indexOf('?')>-1?'&':'?')+'format=json&key='+encodeURIComponent(key)+'&t='+Date.now())
+        .then(r=>r.text()).then(done).catch(e=>fail(e.message));
+    } else if(window.SNAPSHOT){ done(window.SNAPSHOT); }
+    else { $('loading').textContent='No data source: set DATA_URL at the top of this file.'; }
+  }
+  if(window.Chart){Chart.defaults.font.family='Inter, system-ui, sans-serif';Chart.defaults.color='#4b5563';}
+  ['fPeriod','fProject','fOwner'].forEach(id=>$(id).addEventListener('change',render));
+  $('btnRefresh').addEventListener('click',load);
+  load();
+})();
+</script>
+</body>
+</html>
