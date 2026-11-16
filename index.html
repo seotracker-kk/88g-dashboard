@@ -104,6 +104,15 @@
     <div class="card"><h2>Internal ad spend</h2><div class="hint" id="iaHint2"></div><div class="scroll" style="max-height:380px"><table id="tIA"></table></div></div>
   </div>
 
+  <div class="card" style="margin-bottom:16px"><h2>Paid backlink plan &amp; spend · by client and activity</h2><div class="hint" id="blHint"></div><div class="scroll"><table id="tBL"></table></div></div>
+
+  <div class="grid g2e">
+    <div class="card"><h2>Backlink plan · monthly budget by client</h2><div class="hint">Stacked by activity · ₹ per month from the Backlink Plan tab</div><div class="chart tall"><canvas id="cBL"></canvas></div></div>
+    <div class="card"><h2>Backlink plan vs spend · by activity</h2><div class="hint" id="blActHint"></div><div class="scroll" style="max-height:380px"><table id="tBLAct"></table></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px"><h2>Paid ads by client · Meta, LinkedIn, Emailer</h2><div class="hint" id="adsHint"></div><div class="scroll"><table id="tAds"></table></div></div>
+
   <div class="card" style="margin-bottom:16px"><h2>By project</h2><div class="hint">Selected period · sorted by planned budget</div><div class="scroll"><table id="tProjects"></table></div></div>
 
   <div class="grid g2e">
@@ -192,11 +201,21 @@ window.DATA_URL = 'https://script.google.com/macros/s/AKfycbzuqlqwmQR2guUFoB8ZRO
     const iaSpentOf=a=>a.actual.reduce((s,v,i)=>s+((P.label==='All time'||inP(mTs(i)))?v:0),0);
     const iaSpentP=IA.reduce((s,a)=>s+iaSpentOf(a),0);
     const gst=D.adsGst||0.18;
+    // paid backlink plan
+    const ownProj=fo?new Set(D.tasks.filter(t=>t.owner===fo).map(t=>t.project)):null;
+    const BL=(D.backlinkPlan||[]).filter(b=>(!fp||b.project===fp)&&(!ownProj||ownProj.has(b.project)));
+    const blMonthly=BL.reduce((s,b)=>s+b.monthly,0), blLinks=BL.reduce((s,b)=>s+b.q[0]+b.q[1]+b.q[2],0);
+    const blT=[0,1,2].map(i=>BL.reduce((s,b)=>s+b.q[i],0));
+    const AMAP={'Guest Post':'Guest Post','Niche Edit / Link Insertion':'Guest Post','Press Release':'Press Release','Sponsored Article':'Sponsored Editorial','Sponsored Editorial':'Sponsored Editorial','Directory / Citation':'Listings & Profiles','Reddit':'Reddit (Paid)','Quora':'Quora (Paid)','Wikipedia':'Wikipedia (Paid)','LinkedIn Thought Leader Ads':'LinkedIn Thought Leader Ads','Wiki-style Profile':'Wiki-style Profiles'};
+    const BLA=['Press Release','Sponsored Editorial','Guest Post','Listings & Profiles','LinkedIn Thought Leader Ads','Reddit (Paid)','Quora (Paid)','Wikipedia (Paid)','Wiki-style Profiles'];
+    const BLS={'Press Release':'PR','Sponsored Editorial':'Editorial','Guest Post':'Guest post','Listings & Profiles':'Listings','LinkedIn Thought Leader Ads':'LinkedIn TLA','Reddit (Paid)':'Reddit','Quora (Paid)':'Quora','Wikipedia (Paid)':'Wikipedia','Wiki-style Profiles':'Wiki profiles'};
+    const actOf=l=>AMAP[l.activity]||'Other';
 
     // ---------- KPIs
     const k=[];
     k.push(kpi('Total budget · '+P.label, inr(planned+(showTools?toolsPeriod:0)+iaBudgetP), (showTools?'Activities '+inrS(planned)+' + tools '+inrS(toolsPeriod):'Activities '+inrS(planned)+' (tools not split by project)')+' + internal ads '+inrS(iaBudgetP)));
     k.push(kpi('Paid activities budget', inr(planned), num(qty)+' activities planned'));
+    k.push(kpi('Backlink plan · per month', inr(blMonthly), num(blLinks)+' links/mo (T1 '+blT[0]+' · T2 '+blT[1]+' · T3 '+blT[2]+') · '+inrS(blMonthly*12)+'/yr'));
     k.push(kpi('Paid activities spent', inr(spent), pct(spent,planned)+'% of budget used', pct(spent,planned)));
     k.push(kpi('Paid tools · per month', inr(toolsMonthly), inr(toolsMonthly*12)+' per year · '+tools.filter(t=>t.monthly>0).length+' paying tools'));
     k.push(kpi('Internal ads · per month', inr(iaMonthly), 'Client budget share '+inrS(iaClient)+' + SEO budget '+inrS(iaSeo)+' · '+inrS(iaMonthly*12)+'/yr · +'+Math.round(gst*100)+'% GST'));
@@ -258,6 +277,42 @@ window.DATA_URL = 'https://script.google.com/macros/s/AKfycbzuqlqwmQR2guUFoB8ZRO
       iaS.map(a=>{const sp=iaSpentOf(a),bud=a.monthly*P.months;return '<tr><td><b>'+esc(a.account)+'</b><div class="tag">'+esc(a.platform)+(a.project?' · '+esc(a.project):'')+'</div></td><td class="n">'+(a.clientBudget?inr(a.clientBudget):'<span class="muted">—</span>')+'</td><td class="n">'+inr(a.fromClient)+(a.pct?'<div class="tag">'+Math.round(a.pct*100)+'%</div>':'')+'</td><td class="n">'+inr(a.fromSeo)+'</td><td class="n"><b>'+inr(a.monthly)+'</b><div class="tag">'+inrS(a.yearly)+'/yr</div></td><td class="n">'+inr(sp)+'</td><td class="n" style="color:'+(bud-sp<0?'var(--red)':'inherit')+'">'+inr(bud-sp)+'</td></tr>'}).join('')
       +'<tr><td><b>Total</b></td><td class="n"><b>'+inr(IA.reduce((s,a)=>s+a.clientBudget,0))+'</b></td><td class="n"><b>'+inr(iaClient)+'</b></td><td class="n"><b>'+inr(iaSeo)+'</b></td><td class="n"><b>'+inr(iaMonthly)+'</b><div class="tag">'+inrS(iaMonthly*12)+'/yr</div></td><td class="n"><b>'+inr(iaSpentP)+'</b></td><td class="n"><b>'+inr(iaBudgetP-iaSpentP)+'</b></td></tr>'
       :'<tr><td class="empty">'+(D.internalAds?'No internal ad accounts for this filter.':'Internal Ad Spend tab not set up yet — run 88G Tracker → Create Internal Ad Spend tab.')+'</td></tr>';
+
+    // ---------- Paid backlink plan by client × activity
+    const clients=[...new Set(BL.map(b=>b.project))];
+    const cRows=clients.map(p=>{const bs=BL.filter(b=>b.project===p);const ls=links.filter(l=>l.project===p);
+      const act={};BLA.forEach(a=>{const b=bs.filter(x=>x.activity===a);act[a]={plan:b.reduce((s,x)=>s+x.monthly,0),q:b.reduce((s,x)=>s+x.q[0]+x.q[1]+x.q[2],0),sp:ls.filter(l=>actOf(l)===a).reduce((s,l)=>s+(l.priceInr||0),0)}});
+      const m=bs.reduce((s,b)=>s+b.monthly,0);
+      return {p,client:bs[0].client,pkg:bs[0].pkg,m,t:[0,1,2].map(i=>bs.reduce((s,b)=>s+b.q[i],0)),act,sp:ls.reduce((s,l)=>s+(l.priceInr||0),0)}}).sort((a,b)=>b.m-a.m);
+    $('blHint').textContent='Plan = ₹ per month from the Backlink Plan tab · "spent" = live paid links in '+P.label+' (Team Entry, by publish date) · cells show plan/mo with spend underneath';
+    const cell=(a)=>'<td class="n">'+(a.q?(a.plan?inrS(a.plan):'Free')+'<div class="tag">'+a.q+' link'+(a.q===1?'':'s')+'</div>':'<span class="muted">—</span>')+(a.sp?'<div class="tag" style="color:var(--green)">spent '+inrS(a.sp)+'</div>':'')+'</td>';
+    const tot={};BLA.forEach(a=>{tot[a]={plan:cRows.reduce((s,r)=>s+r.act[a].plan,0),q:cRows.reduce((s,r)=>s+r.act[a].q,0),sp:cRows.reduce((s,r)=>s+r.act[a].sp,0)}});
+    const blSpent=cRows.reduce((s,r)=>s+r.sp,0);
+    $('tBL').innerHTML=cRows.length?'<tr><th>Client</th><th class="n">Links/mo<div class="tag">T1·T2·T3</div></th>'+BLA.map(a=>'<th class="n">'+BLS[a]+'</th>').join('')+'<th class="n">Plan / mo</th><th class="n">Plan · '+esc(P.label)+'</th><th class="n">Spent · '+esc(P.label)+'</th><th class="n">Used</th></tr>'+
+      cRows.map(r=>'<tr><td><b>'+esc(r.p)+'</b><div class="tag">'+esc(r.pkg||'')+'</div></td><td class="n">'+(r.t[0]+r.t[1]+r.t[2])+'<div class="tag">'+r.t.join(' · ')+'</div></td>'+BLA.map(a=>cell(r.act[a])).join('')+'<td class="n"><b>'+inr(r.m)+'</b></td><td class="n">'+inr(r.m*P.months)+'</td><td class="n">'+inr(r.sp)+'</td><td class="n">'+pct(r.sp,r.m*P.months)+'%</td></tr>').join('')+
+      '<tr><td><b>Total</b></td><td class="n"><b>'+blLinks+'</b><div class="tag">'+blT.join(' · ')+'</div></td>'+BLA.map(a=>cell(tot[a]).replace('<td class="n">','<td class="n" style="font-weight:600">')).join('')+'<td class="n"><b>'+inr(blMonthly)+'</b></td><td class="n"><b>'+inr(blMonthly*P.months)+'</b></td><td class="n"><b>'+inr(blSpent)+'</b></td><td class="n"><b>'+pct(blSpent,blMonthly*P.months)+'%</b></td></tr>'
+      :'<tr><td class="empty">'+(D.backlinkPlan?'No backlink plan rows for this filter.':'Backlink Plan tab not set up yet — run 88G Tracker → Create Paid Backlink Plan tabs.')+'</td></tr>';
+    const palette=[C.blue,C.purple,C.teal,C.orange,'#0a66c2','#ff4500','#b92b27','#636466','#8bc34a'];
+    chart('cBL',{type:'bar',data:{labels:cRows.map(r=>r.p),datasets:BLA.map((a,i)=>({label:BLS[a],data:cRows.map(r=>r.act[a].plan),backgroundColor:palette[i],borderRadius:2}))},
+      options:base({indexAxis:'y',scales:{x:{stacked:true,ticks:{callback:v=>inrS(v)}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
+    $('blActHint').textContent='Plan for '+P.label+' vs live paid links in '+P.label;
+    const other=links.filter(l=>actOf(l)==='Other'&&BL.length).reduce((s,l)=>s+(l.priceInr||0),0);
+    $('tBLAct').innerHTML='<tr><th>Activity</th><th class="n">Links / mo</th><th class="n">Plan / mo</th><th class="n">Plan · period</th><th class="n">Spent · period</th><th class="n">Used</th></tr>'+
+      BLA.filter(a=>tot[a].plan||tot[a].sp).map(a=>'<tr><td><b>'+a+'</b></td><td class="n">'+tot[a].q+'</td><td class="n">'+inr(tot[a].plan)+'</td><td class="n">'+inr(tot[a].plan*P.months)+'</td><td class="n">'+inr(tot[a].sp)+'</td><td class="n">'+pct(tot[a].sp,tot[a].plan*P.months)+'%</td></tr>').join('')+
+      (other?'<tr><td>Other / forum</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">'+inr(other)+'</td><td></td></tr>':'');
+
+    // ---------- Paid ads by client
+    const PLAT=['Meta','LinkedIn','Email','Other'];
+    const platOf=a=>/linkedin/i.test(a.platform)&&!/meta/i.test(a.platform)?'LinkedIn':/meta/i.test(a.platform)?'Meta':/email/i.test(a.platform)?'Email':'Other';
+    const adsCl=[...new Set(IA.map(a=>a.project||'—'))].map(p=>{const as=IA.filter(a=>(a.project||'—')===p);const by={};PLAT.forEach(x=>by[x]=as.filter(a=>platOf(a)===x).reduce((s,a)=>s+a.monthly,0));
+      const m=as.reduce((s,a)=>s+a.monthly,0),sp=as.reduce((s,a)=>s+iaSpentOf(a),0);
+      return {p,n:as.length,by,m,fc:as.reduce((s,a)=>s+a.fromClient,0),fs:as.reduce((s,a)=>s+a.fromSeo,0),sp,bud:m*P.months}}).sort((a,b)=>b.m-a.m);
+    $('adsHint').textContent='Monthly budget by platform (ex-GST) from the Internal Ad Spend tab · spent & balance for '+P.label+' · Meta+LinkedIn combined accounts count under Meta';
+    const adsTot=k=>adsCl.reduce((s,r)=>s+(typeof k==='function'?k(r):r[k]),0);
+    $('tAds').innerHTML=adsCl.length?'<tr><th>Client</th><th class="n">Accounts</th>'+PLAT.map(x=>'<th class="n">'+x+' / mo</th>').join('')+'<th class="n">Total / mo</th><th class="n">Yearly</th><th class="n">From client budget</th><th class="n">From SEO budget</th><th class="n">Spent · '+esc(P.label)+'</th><th class="n">Balance</th></tr>'+
+      adsCl.map(r=>'<tr><td><b>'+esc(r.p)+'</b></td><td class="n">'+r.n+'</td>'+PLAT.map(x=>'<td class="n">'+(r.by[x]?inr(r.by[x]):'<span class="muted">—</span>')+'</td>').join('')+'<td class="n"><b>'+inr(r.m)+'</b></td><td class="n">'+inr(r.m*12)+'</td><td class="n">'+inr(r.fc)+'</td><td class="n">'+inr(r.fs)+'</td><td class="n">'+inr(r.sp)+'</td><td class="n" style="color:'+(r.bud-r.sp<0?'var(--red)':'inherit')+'">'+inr(r.bud-r.sp)+'</td></tr>').join('')+
+      '<tr><td><b>Total</b></td><td class="n"><b>'+adsTot('n')+'</b></td>'+PLAT.map(x=>'<td class="n"><b>'+inr(adsTot(r=>r.by[x]))+'</b></td>').join('')+'<td class="n"><b>'+inr(adsTot('m'))+'</b></td><td class="n"><b>'+inr(adsTot('m')*12)+'</b></td><td class="n"><b>'+inr(adsTot('fc'))+'</b></td><td class="n"><b>'+inr(adsTot('fs'))+'</b></td><td class="n"><b>'+inr(adsTot('sp'))+'</b></td><td class="n"><b>'+inr(adsTot('bud')-adsTot('sp'))+'</b></td></tr>'
+      :'<tr><td class="empty">No internal ad accounts for this filter.</td></tr>';
 
     // ---------- Projects
     const projs=[...new Set(tasks.map(t=>t.project))];
