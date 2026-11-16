@@ -85,23 +85,18 @@
   <section class="kpis" id="kpis"></section>
 
   <div class="grid g2">
-    <div class="card"><h2>Monthly budget vs actual spend</h2><div class="hint">Financial year · budget (paid activities by deadline + internal ads) vs actual spend (paid links by publish date + paid tools + internal ads)</div><div class="chart"><canvas id="cMonthly"></canvas></div></div>
-    <div class="card"><h2>Paid activity status</h2><div class="hint" id="statusHint"></div><div class="chart"><canvas id="cStatus"></canvas></div></div>
+    <div class="card"><h2>Monthly budget vs actual spend</h2><div class="hint">Financial year · budget (paid tools + backlink plan + paid ads) vs actual spend (paid tools + live paid links by publish date + paid ads actuals)</div><div class="chart"><canvas id="cMonthly"></canvas></div></div>
+    <div class="card"><h2>Budget split</h2><div class="hint" id="splitHint"></div><div class="chart"><canvas id="cSplit"></canvas></div></div>
   </div>
 
   <div class="grid g2e">
-    <div class="card"><h2>Completed vs pending by activity</h2><div class="hint">Links live vs still pending, selected period</div><div class="chart"><canvas id="cActQty"></canvas></div></div>
-    <div class="card"><h2>Budget vs spent by activity</h2><div class="hint">Planned budget vs actual spend (INR), selected period</div><div class="chart"><canvas id="cActBudget"></canvas></div></div>
+    <div class="card"><h2>Links live vs pending by activity</h2><div class="hint">Backlink plan links vs live paid links, selected period</div><div class="chart"><canvas id="cActQty"></canvas></div></div>
+    <div class="card"><h2>Backlink budget vs spent by activity</h2><div class="hint">Backlink plan budget vs live paid-link spend (INR), selected period</div><div class="chart"><canvas id="cActBudget"></canvas></div></div>
   </div>
 
   <div class="grid g2e">
     <div class="card"><h2>Paid tools · monthly cost</h2><div class="hint" id="toolsHint"></div><div class="chart tall"><canvas id="cTools"></canvas></div></div>
     <div class="card"><h2>Paid tools</h2><div class="hint">Cancelled and paused tools cost ₹0</div><div class="scroll" style="max-height:380px"><table id="tTools"></table></div></div>
-  </div>
-
-  <div class="grid g2e">
-    <div class="card"><h2>Internal ads · monthly budget by account</h2><div class="hint" id="iaHint"></div><div class="chart tall"><canvas id="cIA"></canvas></div></div>
-    <div class="card"><h2>Internal ad spend</h2><div class="hint" id="iaHint2"></div><div class="scroll" style="max-height:380px"><table id="tIA"></table></div></div>
   </div>
 
   <div class="card" style="margin-bottom:16px"><h2>Paid backlink plan &amp; spend · by client and activity</h2><div class="hint" id="blHint"></div><div class="scroll"><table id="tBL"></table></div></div>
@@ -113,7 +108,7 @@
 
   <div class="card" style="margin-bottom:16px"><h2>Paid ads by client · Meta, LinkedIn, Emailer</h2><div class="hint" id="adsHint"></div><div class="scroll"><table id="tAds"></table></div></div>
 
-  <div class="card" style="margin-bottom:16px"><h2>By project</h2><div class="hint">Selected period · sorted by planned budget</div><div class="scroll"><table id="tProjects"></table></div></div>
+  <div class="card" style="margin-bottom:16px"><h2>By client · total budget &amp; spend</h2><div class="hint" id="projHint"></div><div class="scroll"><table id="tProjects"></table></div></div>
 
   <div class="grid g2e">
     <div class="card"><h2>Team scorecard</h2><div class="hint">By project owner and assignee, selected period</div><div class="scroll"><table id="tTeam"></table></div></div>
@@ -211,50 +206,51 @@ window.DATA_URL = 'https://script.google.com/macros/s/AKfycbzuqlqwmQR2guUFoB8ZRO
     const BLS={'Press Release':'PR','Sponsored Editorial':'Editorial','Guest Post':'Guest post','Listings & Profiles':'Listings','LinkedIn Thought Leader Ads':'LinkedIn TLA','Reddit (Paid)':'Reddit','Quora (Paid)':'Quora','Wikipedia (Paid)':'Wikipedia','Wiki-style Profiles':'Wiki profiles'};
     const actOf=l=>AMAP[l.activity]||'Other';
 
-    // ---------- KPIs
+    // ---------- KPIs (3 budgets: paid tools · backlink plan · paid ads)
+    const toolsP=showTools?toolsPeriod:0, blBudgetP=blMonthly*P.months;
+    const blSpentP=links.reduce((s,l)=>s+(l.priceInr||0),0);
+    const totBudget=toolsP+blBudgetP+iaBudgetP, totSpent=toolsP+blSpentP+iaSpentP;
+    const blPlanLinksP=blLinks*P.months, liveP=links.length;
     const k=[];
-    k.push(kpi('Total budget · '+P.label, inr(planned+(showTools?toolsPeriod:0)+iaBudgetP), (showTools?'Activities '+inrS(planned)+' + tools '+inrS(toolsPeriod):'Activities '+inrS(planned)+' (tools not split by project)')+' + internal ads '+inrS(iaBudgetP)));
-    k.push(kpi('Paid activities budget', inr(planned), num(qty)+' activities planned'));
-    k.push(kpi('Backlink plan · per month', inr(blMonthly), num(blLinks)+' links/mo (T1 '+blT[0]+' · T2 '+blT[1]+' · T3 '+blT[2]+') · '+inrS(blMonthly*12)+'/yr'));
-    k.push(kpi('Paid activities spent', inr(spent), pct(spent,planned)+'% of budget used', pct(spent,planned)));
+    k.push(kpi('Total budget · '+P.label, inr(totBudget), (showTools?'Tools '+inrS(toolsP)+' + ':'')+'Backlinks '+inrS(blBudgetP)+' + Paid ads '+inrS(iaBudgetP)+(showTools?'':' (tools not split by client)')));
+    k.push(kpi('Total spent · '+P.label, inr(totSpent), pct(totSpent,totBudget)+'% of budget'+(showTools?' · tools counted at run-rate':''), pct(totSpent,totBudget)));
     k.push(kpi('Paid tools · per month', inr(toolsMonthly), inr(toolsMonthly*12)+' per year · '+tools.filter(t=>t.monthly>0).length+' paying tools'));
-    k.push(kpi('Internal ads · per month', inr(iaMonthly), 'Client budget share '+inrS(iaClient)+' + SEO budget '+inrS(iaSeo)+' · '+inrS(iaMonthly*12)+'/yr · +'+Math.round(gst*100)+'% GST'));
-    k.push(kpi('Internal ads spent · '+P.label, inr(iaSpentP), pct(iaSpentP,iaBudgetP)+'% of '+inrS(iaBudgetP)+' budget', pct(iaSpentP,iaBudgetP)));
-    k.push(kpi('Completed vs pending', num(live)+' / '+num(pending), pct(live,qty)+'% complete', pct(live,qty)));
-    k.push(kpi('Overdue tasks (now)', num(overdue), atrisk+' at risk or due within 48 hrs', null, overdue>0));
-    k.push(kpi('On-time completion', doneT.length?pct(onTime,doneT.length)+'%':'—', doneT.length?onTime+' of '+doneT.length+' completed tasks':'No completed tasks yet'));
+    k.push(kpi('Backlink plan · per month', inr(blMonthly), num(blLinks)+' links/mo (T1 '+blT[0]+' · T2 '+blT[1]+' · T3 '+blT[2]+') · '+inrS(blMonthly*12)+'/yr'));
+    k.push(kpi('Backlink spent · '+P.label, inr(blSpentP), pct(blSpentP,blBudgetP)+'% of '+inrS(blBudgetP)+' plan', pct(blSpentP,blBudgetP)));
+    k.push(kpi('Paid ads · per month', inr(iaMonthly), 'Client budget share '+inrS(iaClient)+' + SEO budget '+inrS(iaSeo)+' · '+inrS(iaMonthly*12)+'/yr · +'+Math.round(gst*100)+'% GST'));
+    k.push(kpi('Paid ads spent · '+P.label, inr(iaSpentP), pct(iaSpentP,iaBudgetP)+'% of '+inrS(iaBudgetP)+' budget', pct(iaSpentP,iaBudgetP)));
+    k.push(kpi('Links live vs planned · '+P.label, num(liveP)+' / '+num(blPlanLinksP), pct(liveP,blPlanLinksP)+'% of backlink plan delivered', pct(liveP,blPlanLinksP)));
     $('kpis').innerHTML=k.join('');
 
     // ---------- Monthly chart (FY, ignores period)
-    const fy=new Date(D.fyStart), labels=[], pl=[], sp=[], tl=[], ib=[], is=[];
+    const fy=new Date(D.fyStart), labels=[], tb=[], bb=[], ab=[], ts=[], bs=[], as_=[];
     for(let i=0;i<12;i++){const a=new Date(fy.getFullYear(),fy.getMonth()+i,1).getTime(), b=new Date(fy.getFullYear(),fy.getMonth()+i+1,1).getTime();
       labels.push(MON[new Date(a).getMonth()]+' '+String(new Date(a).getFullYear()).slice(2));
-      pl.push(tasksAll.filter(t=>t.deadline>=a&&t.deadline<b).reduce((s,t)=>s+t.budget,0));
-      sp.push(linksAll.filter(l=>{const d=linkDate(l);return d>=a&&d<b}).reduce((s,l)=>s+(l.priceInr||0),0));
-      tl.push(showTools?toolsMonthly:0);
-      ib.push(iaMonthly); is.push(IA.reduce((s,x)=>s+(x.actual[i]||0),0));}
+      tb.push(showTools?toolsMonthly:0); bb.push(blMonthly); ab.push(iaMonthly);
+      ts.push(showTools?toolsMonthly:0);
+      bs.push(linksAll.filter(l=>{const d=linkDate(l);return d>=a&&d<b}).reduce((s,l)=>s+(l.priceInr||0),0));
+      as_.push(IA.reduce((s,x)=>s+(x.actual[i]||0),0));}
     chart('cMonthly',{type:'bar',data:{labels,datasets:[
-      {label:'Paid activities · planned',data:pl,backgroundColor:C.lblue,stack:'p',borderRadius:4},
-      {label:'Paid activities · spent',data:sp,backgroundColor:C.blue,stack:'a',borderRadius:4},
-      {label:'Internal ads · budget',data:ib,backgroundColor:'#cbbcfb',stack:'p',borderRadius:4},
-      {label:'Paid tools',data:tl,backgroundColor:C.orange,stack:'a',borderRadius:4},
-      {label:'Internal ads · spent',data:is,backgroundColor:C.purple,stack:'a',borderRadius:4}]},
+      {label:'Tools · budget',data:tb,backgroundColor:'#fcd9b8',stack:'b',borderRadius:2},
+      {label:'Backlinks · plan',data:bb,backgroundColor:C.lblue,stack:'b',borderRadius:2},
+      {label:'Paid ads · budget',data:ab,backgroundColor:'#cbbcfb',stack:'b',borderRadius:2},
+      {label:'Tools · spent',data:ts,backgroundColor:C.orange,stack:'s',borderRadius:2},
+      {label:'Backlinks · spent',data:bs,backgroundColor:C.blue,stack:'s',borderRadius:2},
+      {label:'Paid ads · spent',data:as_,backgroundColor:C.purple,stack:'s',borderRadius:2}]},
       options:base({scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>inrS(v)}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
 
-    // ---------- Status doughnut
-    const order=['Done','On Track','Due Soon','At Risk','Overdue','No Deadline'], col=[C.green,C.blue,C.amber,C.orange,C.red,C.gray];
-    const sc=order.map(s=>tasks.filter(t=>t.status===s).length);
-    $('statusHint').textContent=tasks.length+' activity lines in '+P.label;
-    chart('cStatus',{type:'doughnut',data:{labels:order,datasets:[{data:sc,backgroundColor:col,borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{boxWidth:12,font:{family:'Inter'}}}}}});
+    // ---------- Budget split doughnut
+    $('splitHint').textContent=inr(totBudget)+' total budget for '+P.label;
+    chart('cSplit',{type:'doughnut',data:{labels:['Paid tools','Paid backlinks','Paid ads'],datasets:[{data:[toolsP,blBudgetP,iaBudgetP],backgroundColor:[C.orange,C.blue,C.purple],borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right',labels:{boxWidth:12,font:{family:'Inter'}}},tooltip:{callbacks:{label:c=>c.label+': '+inr(c.raw)+' ('+pct(c.raw,totBudget)+'%)'}}}}});
 
-    // ---------- By activity
-    const acts=[...new Set(tasks.map(t=>t.activity))];
-    const aRows=acts.map(a=>{const ts=tasks.filter(t=>t.activity===a);const q=ts.reduce((s,t)=>s+t.qty,0),lv=ts.reduce((s,t)=>s+Math.min(t.delivered,t.qty),0);
-      return {a,q,lv,pd:q-lv,b:ts.reduce((s,t)=>s+t.budget,0),s:links.filter(l=>l.activity===a).reduce((s,l)=>s+(l.priceInr||0),0)}}).sort((x,y)=>y.b-x.b);
+    // ---------- By activity (backlink plan vs live links)
+    const aRows=BLA.map(a=>{const bs2=BL.filter(b=>b.activity===a);const q=bs2.reduce((s,b)=>s+b.q[0]+b.q[1]+b.q[2],0)*P.months;
+      const ls=links.filter(l=>actOf(l)===a);const lv=ls.length;
+      return {a:BLS[a],q,lv,pd:Math.max(0,q-lv),b:bs2.reduce((s,b)=>s+b.monthly,0)*P.months,s:ls.reduce((s,l)=>s+(l.priceInr||0),0)}}).filter(r=>r.q||r.lv).sort((x,y)=>y.b-x.b);
     chart('cActQty',{type:'bar',data:{labels:aRows.map(r=>r.a),datasets:[{label:'Live',data:aRows.map(r=>r.lv),backgroundColor:C.green,borderRadius:4},{label:'Pending',data:aRows.map(r=>r.pd),backgroundColor:C.lgray,borderRadius:4}]},
       options:base({indexAxis:'y',scales:{x:{stacked:true,ticks:{precision:0}},y:{stacked:true,grid:{display:false}}}})});
-    chart('cActBudget',{type:'bar',data:{labels:aRows.map(r=>r.a),datasets:[{label:'Planned budget',data:aRows.map(r=>r.b),backgroundColor:C.lblue,borderRadius:4},{label:'Spent',data:aRows.map(r=>r.s),backgroundColor:C.blue,borderRadius:4}]},
+    chart('cActBudget',{type:'bar',data:{labels:aRows.map(r=>r.a),datasets:[{label:'Backlink plan budget',data:aRows.map(r=>r.b),backgroundColor:C.lblue,borderRadius:4},{label:'Spent',data:aRows.map(r=>r.s),backgroundColor:C.blue,borderRadius:4}]},
       options:base({scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>inrS(v)}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
 
     // ---------- Tools
@@ -264,19 +260,6 @@ window.DATA_URL = 'https://script.google.com/macros/s/AKfycbzuqlqwmQR2guUFoB8ZRO
       options:base({indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>inr(c.raw)+' / month ('+paying[c.dataIndex].status+')'}}},scales:{x:{ticks:{callback:v=>inrS(v)}},y:{grid:{display:false}}}})});
     $('tTools').innerHTML='<tr><th>Tool</th><th>Plan</th><th>Status</th><th class="n">Price</th><th class="n">Monthly (INR)</th><th>Renewal</th></tr>'+
       tools.slice().sort((a,b)=>b.monthly-a.monthly).map(t=>'<tr><td><b>'+esc(t.tool)+'</b><div class="tag">'+esc(t.category)+'</div></td><td>'+esc(t.plan)+'<div class="tag">'+esc(t.cycle)+'</div></td><td>'+pill(t.status)+'</td><td class="n">'+esc(t.currency)+' '+num(t.price)+'</td><td class="n">'+inr(t.monthly)+'</td><td>'+(t.renewal?fmtD(t.renewal):'<span class="muted">—</span>')+'</td></tr>').join('');
-
-    // ---------- Internal ads
-    const iaS=IA.slice().sort((a,b)=>b.monthly-a.monthly), iaPay=iaS.filter(a=>a.monthly>0);
-    $('iaHint').textContent=inr(iaMonthly)+' / month · '+inr(iaMonthly*12)+' / year (ex-GST) · incl. '+Math.round(gst*100)+'% GST '+inr(iaMonthly*(1+gst))+' / month';
-    $('iaHint2').textContent='Client share = '+(IA.length&&IA.find(a=>a.pct)?Math.round(IA.find(a=>a.pct).pct*100):12)+'% of the client\'s ad-account budget · SEO = carved from the SEO retainer · spent & balance for '+P.label;
-    chart('cIA',{type:'bar',data:{labels:iaPay.map(a=>a.account),datasets:[
-      {label:'From client budget',data:iaPay.map(a=>a.fromClient),backgroundColor:C.purple,borderRadius:4},
-      {label:'From SEO budget',data:iaPay.map(a=>a.fromSeo),backgroundColor:C.teal,borderRadius:4}]},
-      options:base({indexAxis:'y',scales:{x:{stacked:true,ticks:{callback:v=>inrS(v)}},y:{stacked:true,grid:{display:false}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+inr(c.raw)}}}})});
-    $('tIA').innerHTML=iaS.length?'<tr><th>Account</th><th class="n">Client ad budget</th><th class="n">From client</th><th class="n">From SEO</th><th class="n">Monthly</th><th class="n">Spent</th><th class="n">Balance</th></tr>'+
-      iaS.map(a=>{const sp=iaSpentOf(a),bud=a.monthly*P.months;return '<tr><td><b>'+esc(a.account)+'</b><div class="tag">'+esc(a.platform)+(a.project?' · '+esc(a.project):'')+'</div></td><td class="n">'+(a.clientBudget?inr(a.clientBudget):'<span class="muted">—</span>')+'</td><td class="n">'+inr(a.fromClient)+(a.pct?'<div class="tag">'+Math.round(a.pct*100)+'%</div>':'')+'</td><td class="n">'+inr(a.fromSeo)+'</td><td class="n"><b>'+inr(a.monthly)+'</b><div class="tag">'+inrS(a.yearly)+'/yr</div></td><td class="n">'+inr(sp)+'</td><td class="n" style="color:'+(bud-sp<0?'var(--red)':'inherit')+'">'+inr(bud-sp)+'</td></tr>'}).join('')
-      +'<tr><td><b>Total</b></td><td class="n"><b>'+inr(IA.reduce((s,a)=>s+a.clientBudget,0))+'</b></td><td class="n"><b>'+inr(iaClient)+'</b></td><td class="n"><b>'+inr(iaSeo)+'</b></td><td class="n"><b>'+inr(iaMonthly)+'</b><div class="tag">'+inrS(iaMonthly*12)+'/yr</div></td><td class="n"><b>'+inr(iaSpentP)+'</b></td><td class="n"><b>'+inr(iaBudgetP-iaSpentP)+'</b></td></tr>'
-      :'<tr><td class="empty">'+(D.internalAds?'No internal ad accounts for this filter.':'Internal Ad Spend tab not set up yet — run 88G Tracker → Create Internal Ad Spend tab.')+'</td></tr>';
 
     // ---------- Paid backlink plan by client × activity
     const clients=[...new Set(BL.map(b=>b.project))];
@@ -314,14 +297,18 @@ window.DATA_URL = 'https://script.google.com/macros/s/AKfycbzuqlqwmQR2guUFoB8ZRO
       '<tr><td><b>Total</b></td><td class="n"><b>'+adsTot('n')+'</b></td>'+PLAT.map(x=>'<td class="n"><b>'+inr(adsTot(r=>r.by[x]))+'</b></td>').join('')+'<td class="n"><b>'+inr(adsTot('m'))+'</b></td><td class="n"><b>'+inr(adsTot('m')*12)+'</b></td><td class="n"><b>'+inr(adsTot('fc'))+'</b></td><td class="n"><b>'+inr(adsTot('fs'))+'</b></td><td class="n"><b>'+inr(adsTot('sp'))+'</b></td><td class="n"><b>'+inr(adsTot('bud')-adsTot('sp'))+'</b></td></tr>'
       :'<tr><td class="empty">No internal ad accounts for this filter.</td></tr>';
 
-    // ---------- Projects
-    const projs=[...new Set(tasks.map(t=>t.project))];
-    const pRows=projs.map(p=>{const ts=tasks.filter(t=>t.project===p);const q=ts.reduce((s,t)=>s+t.qty,0),lv=ts.reduce((s,t)=>s+Math.min(t.delivered,t.qty),0);
-      return {p,o:ts[0].owner,q,lv,b:ts.reduce((s,t)=>s+t.budget,0),s:links.filter(l=>l.project===p).reduce((s,l)=>s+(l.priceInr||0),0),od:tasksAll.filter(t=>t.project===p&&t.status==='Overdue').length,acts:[...new Set(ts.map(t=>t.activity))].join(', ')}}).sort((a,b)=>b.b-a.b);
-    $('tProjects').innerHTML=pRows.length?'<tr><th>Project</th><th>Owner</th><th>Activities</th><th class="n">Planned</th><th class="n">Live</th><th style="min-width:150px">Progress</th><th class="n">Budget</th><th class="n">Spent</th><th class="n">Overdue</th></tr>'+
-      pRows.map(r=>'<tr><td><b>'+esc(r.p)+'</b></td><td>'+esc(r.o)+'</td><td class="muted">'+esc(r.acts)+'</td><td class="n">'+r.q+'</td><td class="n">'+r.lv+'</td><td>'+prog(r.lv,r.q)+'</td><td class="n">'+inr(r.b)+'</td><td class="n">'+inr(r.s)+'</td><td class="n">'+(r.od?'<b style="color:var(--red)">'+r.od+'</b>':'0')+'</td></tr>').join('')
-      +'<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>'+qty+'</b></td><td class="n"><b>'+live+'</b></td><td>'+prog(live,qty)+'</td><td class="n"><b>'+inr(planned)+'</b></td><td class="n"><b>'+inr(spent)+'</b></td><td class="n"><b>'+overdue+'</b></td></tr>'
-      :'<tr><td class="empty">No paid activities planned for this period.</td></tr>';
+    // ---------- By client (backlink plan + paid ads)
+    const allCl=[...new Set([...BL.map(b=>b.project),...IA.map(a=>a.project||'—')])];
+    const pRows=allCl.map(p=>{const bm=BL.filter(b=>b.project===p).reduce((s,b)=>s+b.monthly,0), bq=BL.filter(b=>b.project===p).reduce((s,b)=>s+b.q[0]+b.q[1]+b.q[2],0)*P.months;
+      const as=IA.filter(a=>(a.project||'—')===p), am=as.reduce((s,a)=>s+a.monthly,0), asp=as.reduce((s,a)=>s+iaSpentOf(a),0);
+      const ls=links.filter(l=>l.project===p), bsp=ls.reduce((s,l)=>s+(l.priceInr||0),0);
+      return {p,bm,am,m:bm+am,bud:(bm+am)*P.months,bsp,asp,sp:bsp+asp,bq,lv:ls.length}}).sort((a,b)=>b.m-a.m);
+    $('projHint').textContent='Backlink plan + paid ads per client · '+P.label+' · paid tools are agency-wide, so they are not split by client';
+    const pt=k2=>pRows.reduce((s,r)=>s+r[k2],0);
+    $('tProjects').innerHTML=pRows.length?'<tr><th>Client</th><th class="n">Backlinks / mo</th><th class="n">Paid ads / mo</th><th class="n">Total / mo</th><th class="n">Budget · period</th><th class="n">Backlinks spent</th><th class="n">Ads spent</th><th class="n">Total spent</th><th class="n">Links</th><th style="min-width:140px">Links live vs plan</th></tr>'+
+      pRows.map(r=>'<tr><td><b>'+esc(r.p)+'</b></td><td class="n">'+(r.bm?inr(r.bm):'<span class="muted">—</span>')+'</td><td class="n">'+(r.am?inr(r.am):'<span class="muted">—</span>')+'</td><td class="n"><b>'+inr(r.m)+'</b></td><td class="n">'+inr(r.bud)+'</td><td class="n">'+inr(r.bsp)+'</td><td class="n">'+inr(r.asp)+'</td><td class="n">'+inr(r.sp)+'</td><td class="n">'+r.lv+' / '+r.bq+'</td><td>'+prog(r.lv,r.bq)+'</td></tr>').join('')
+      +'<tr><td><b>Total</b></td><td class="n"><b>'+inr(pt('bm'))+'</b></td><td class="n"><b>'+inr(pt('am'))+'</b></td><td class="n"><b>'+inr(pt('m'))+'</b></td><td class="n"><b>'+inr(pt('bud'))+'</b></td><td class="n"><b>'+inr(pt('bsp'))+'</b></td><td class="n"><b>'+inr(pt('asp'))+'</b></td><td class="n"><b>'+inr(pt('sp'))+'</b></td><td class="n"><b>'+pt('lv')+' / '+pt('bq')+'</b></td><td>'+prog(pt('lv'),pt('bq'))+'</td></tr>'
+      :'<tr><td class="empty">No clients for this filter.</td></tr>';
 
     // ---------- Team
     const people={};
